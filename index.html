@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Suchverfahren visualisieren – Breitensuche &amp; Tiefensuche</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <h1>Suchverfahren visualisieren</h1>
+  </div>
+  <div class="topbar-actions">
+    <div class="segmented" id="viewMode" role="group" aria-label="Ansicht">
+      <button type="button" data-mode="single" class="is-active">Einzelansicht</button>
+      <button type="button" data-mode="compare">Vergleich</button>
+    </div>
+    <button type="button" id="btnPresentation" class="btn btn-ghost" title="Größere Schrift für den Beamer">Beamer</button>
+    <button type="button" id="btnHelp" class="btn btn-ghost">Hilfe</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="sidebar">
+
+    <section class="card">
+      <h2><span class="num">1</span> Graph</h2>
+
+      <label for="preset">Beispiel laden</label>
+      <select id="preset"></select>
+
+      <label for="edgeInput">Kantenliste</label>
+      <textarea id="edgeInput" rows="7" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+      <p class="hint">
+        Python-Notation <code>[('A','B',5), …]</code> oder eine Kante pro Zeile:
+        <code>A B 5</code>. Das Gewicht ist optional (Standard&nbsp;1).
+      </p>
+
+      <label class="check"><input type="checkbox" id="optDirected" /> Gerichteter Graph</label>
+
+      <label for="optOrder">Reihenfolge der Nachbarn</label>
+      <select id="optOrder">
+        <option value="alpha">alphabetisch</option>
+        <option value="input">Eingabereihenfolge</option>
+        <option value="weight">nach Kantengewicht</option>
+      </select>
+
+      <button type="button" id="btnApply" class="btn btn-primary">Graph übernehmen</button>
+      <div id="messages" class="messages" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">2</span> Suche</h2>
+
+      <div class="two">
+        <div>
+          <label for="selStart">Startknoten</label>
+          <select id="selStart"></select>
+        </div>
+        <div>
+          <label for="selGoal">Zielknoten</label>
+          <select id="selGoal"></select>
+        </div>
+      </div>
+
+      <div id="algoRow">
+        <label>Verfahren</label>
+        <div class="segmented full" id="algoPick" role="group" aria-label="Suchverfahren">
+          <button type="button" data-algo="bfs" class="is-active">Breitensuche</button>
+          <button type="button" data-algo="dfs">Tiefensuche</button>
+        </div>
+      </div>
+
+      <label for="optStop">Abbruch</label>
+      <select id="optStop">
+        <option value="first">beim ersten Zielfund anhalten</option>
+        <option value="all">alle Pfade durchsuchen (beste Lösung)</option>
+      </select>
+
+      <label class="check"><input type="checkbox" id="optDfsReverse" checked /> Tiefensuche: Nachbarn umgekehrt auf den Stapel</label>
+      <p class="hint">So wird der in der Reihenfolge <em>erste</em> Nachbar zuerst erkundet – wie beim Suchbaum von Hand.</p>
+
+      <button type="button" id="btnRun" class="btn btn-primary">Suche starten</button>
+    </section>
+
+    <section class="card">
+      <h2><span class="num">3</span> Weitergeben</h2>
+      <div class="buttons">
+        <button type="button" id="btnMd" class="btn btn-ghost">Protokoll (Markdown)</button>
+        <button type="button" id="btnLink" class="btn btn-ghost">Link kopieren</button>
+      </div>
+      <p class="hint" id="linkHint">Der Link enthält Graph, Start, Ziel und Verfahren.</p>
+    </section>
+  </aside>
+
+  <main class="main">
+
+    <div class="playbar">
+      <button type="button" id="btnFirst" class="ctrl" title="Zum Anfang (Pos1)">⏮</button>
+      <button type="button" id="btnPrev" class="ctrl" title="Ein Schritt zurück (←)">◀</button>
+      <button type="button" id="btnPlay" class="ctrl ctrl-play" title="Abspielen (Leertaste)">▶ Abspielen</button>
+      <button type="button" id="btnNext" class="ctrl" title="Ein Schritt vor (→)">▶</button>
+      <button type="button" id="btnLast" class="ctrl" title="Zum Ende (Ende)">⏭</button>
+
+      <input type="range" id="stepSlider" min="0" max="0" value="0" aria-label="Schritt" />
+      <span id="stepLabel" class="step-label">Schritt – / –</span>
+
+      <label class="speed">Tempo
+        <select id="speed">
+          <option value="1600">langsam</option>
+          <option value="900" selected>normal</option>
+          <option value="400">schnell</option>
+          <option value="150">sehr schnell</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="views" class="views"></div>
+  </main>
+</div>
+
+<dialog id="helpDialog">
+  <h2>Kurzanleitung</h2>
+  <h3>So funktioniert die Suche hier</h3>
+  <p>
+    Die Frontier (Warteschlange bzw. Stapel) enthält keine einzelnen Knoten, sondern
+    <strong>ganze Pfade</strong>. In jedem Schritt wird ein Pfad entnommen, auf das Ziel geprüft
+    und – falls er nicht am Ziel endet – um alle Nachbarn des letzten Knotens verlängert.
+    Verlängerungen, die einen Knoten wiederholen, sind Zyklen und werden verworfen.
+    Deshalb ist der Suchbaum hier nicht nachträglich gezeichnet, sondern <em>ist</em> die Datenstruktur.
+  </p>
+  <h3>Breitensuche vs. Tiefensuche</h3>
+  <p>
+    Beide fügen neue Pfade hinten an. Der Unterschied liegt nur in der Entnahme:
+    die Breitensuche nimmt <strong>vorne</strong> (Warteschlange / FIFO),
+    die Tiefensuche <strong>hinten</strong> (Stapel / LIFO).
+  </p>
+  <h3>Wichtig: kürzester ≠ günstigster Weg</h3>
+  <p>
+    Die Breitensuche findet den Weg mit den <strong>wenigsten Kanten</strong> – nicht
+    zwingend den mit den <strong>geringsten Kosten</strong>. Mit der Einstellung
+    „alle Pfade durchsuchen“ siehst du beides nebeneinander: die zuerst gefundene und die
+    tatsächlich beste Lösung. Probier dazu das Beispiel „BFS-Falle“.
+  </p>
+  <h3>Tastatur</h3>
+  <p>
+    <kbd>→</kbd> / <kbd>←</kbd> Schritt vor/zurück · <kbd>Leertaste</kbd> abspielen/pausieren ·
+    <kbd>Pos1</kbd> / <kbd>Ende</kbd> Anfang/Ende
+  </p>
+  <h3>Bedienung der Zeichnungen</h3>
+  <p>
+    Knoten im Graphen lassen sich mit der Maus verschieben. Im Suchbaum kannst du mit dem
+    Mausrad zoomen und durch Ziehen verschieben; „Ansicht“ stellt den Automatikmodus wieder her.
+    Jede Zeichnung lässt sich als SVG oder PNG für Arbeitsblätter speichern.
+  </p>
+  <form method="dialog"><button class="btn btn-primary">Schließen</button></form>
+</dialog>
+
+<script src="js/svg-style.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/search.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/render.js"></script>
+<script src="js/view.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
