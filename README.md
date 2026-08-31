@@ -20,6 +20,10 @@ Abhängigkeiten, keine ES-Module) – ein Doppelklick genügt, auch vom USB-Stic
 
 Der Knopf **Vergleich** zeigt Breiten- und Tiefensuche nebeneinander, synchron
 gesteuert. **Beamer** blendet die Eingabe aus und vergrößert die Schrift.
+**Zyklen aus** im Kopf des Suchbaums blendet die verworfenen Zyklen aus – sie fallen
+dann auch aus der Anordnung, der Baum wird also wirklich schmaler und nicht bloß
+lückenhaft. An der Suche ändert das nichts: Zähler und Protokoll führen die
+verworfenen Zyklen weiter mit.
 Jede Zeichnung lässt sich als SVG oder PNG speichern, das Protokoll als Markdown.
 **Link kopieren** legt den kompletten Aufbau in die Adresse – praktisch für
 Arbeitsaufträge und QR-Codes.

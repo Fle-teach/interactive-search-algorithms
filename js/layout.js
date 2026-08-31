@@ -130,16 +130,29 @@ window.ISA = window.ISA || {};
    * Ebenenweises Baumlayout. Es wird über den VOLLSTÄNDIGEN Baum gerechnet
    * (alle Schritte sind ja schon bekannt) und beim Abspielen nur nach und
    * nach aufgedeckt. So springen bereits gezeichnete Knoten nie umher.
+   *
+   * Ausgeblendete Zyklusknoten werden auch aus dem Layout genommen - nur so
+   * wird der Baum tatsächlich schmaler und nicht bloß lückenhaft. Da ein
+   * verworfener Zyklus nie expandiert wird, ist er immer ein Blatt; sein
+   * Weglassen kann also keinen Ast abschneiden.
+   *
+   * @param {Array} treeNodes
+   * @param {{hideCycles?: boolean}} [options]
    */
-  ISA.layoutTree = function layoutTree(treeNodes) {
+  ISA.layoutTree = function layoutTree(treeNodes, options) {
+    var hideCycles = !!(options && options.hideCycles);
+    function shown(node) { return !(hideCycles && node.pruned); }
+
     // Waagerechter Abstand richtet sich nach der laengsten Beschriftung,
     // damit sich breite Knoten (z. B. Staedtenamen) nicht ueberlappen.
-    var longest = treeNodes.reduce(function (m, n) { return Math.max(m, n.label.length); }, 1);
+    var longest = treeNodes.reduce(function (m, n) {
+      return shown(n) ? Math.max(m, n.label.length) : m;
+    }, 1);
     var dx = Math.max(TREE_DX, longest * 8 + 20);
 
     var children = treeNodes.map(function () { return []; });
     treeNodes.forEach(function (n) {
-      if (n.parentId !== null) children[n.parentId].push(n.id);
+      if (n.parentId !== null && shown(n)) children[n.parentId].push(n.id);
     });
 
     var pos = new Array(treeNodes.length);

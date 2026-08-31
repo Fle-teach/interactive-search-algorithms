@@ -55,6 +55,7 @@
     mode: 'single',
     algorithm: 'bfs',
     layout: 'circle',
+    hideCycles: false,
     stepIndex: 0,
     playing: false
   };
@@ -174,9 +175,11 @@
       var view = ISA.createView({
         onSelectStep: goTo,
         onDragNode: dragNode,
-        onToggleLayout: toggleLayout
+        onToggleLayout: toggleLayout,
+        onToggleCycles: toggleCycles
       });
       view.setRun(run, positions);
+      view.setHideCycles(state.hideCycles);
       el.views.appendChild(view.el);
       return view;
     });
@@ -241,6 +244,14 @@
     state.layout = state.layout === 'circle' ? 'spring' : 'circle';
     positions = ISA.layoutGraph(graph, state.layout);
     views.forEach(function (v) { v.setPositions(positions); });
+  }
+
+  /* Reine Darstellungsfrage - die Suche selbst bleibt unverändert, damit die
+     Zähler für verworfene Zyklen weiter stimmen. */
+  function toggleCycles() {
+    state.hideCycles = !state.hideCycles;
+    views.forEach(function (v) { v.setHideCycles(state.hideCycles); });
+    writeHash();
   }
 
   /* ------------------------------------------------------- Export & Link */
@@ -315,6 +326,7 @@
     if (el.optDirected.checked) params.set('d', '1');
     if (!el.optDfsReverse.checked) params.set('r', '0');
     if (state.mode === 'compare') params.set('v', 'c');
+    if (state.hideCycles) params.set('c', '0');
     var hash = '#' + params.toString();
     try {
       // Unter file:// verbietet der Browser die History-API - dann direkt den Fragmentteil setzen.
@@ -336,6 +348,7 @@
     if (params.get('m')) el.optStop.value = params.get('m');
     setAlgorithm(params.get('a') === 'dfs' ? 'dfs' : 'bfs');
     setMode(params.get('v') === 'c' ? 'compare' : 'single');
+    state.hideCycles = params.get('c') === '0';
 
     if (!applyGraph(false)) return true;
     if (params.get('s')) el.selStart.value = params.get('s');

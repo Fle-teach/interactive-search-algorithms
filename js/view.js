@@ -78,7 +78,7 @@ window.ISA = window.ISA || {};
     ['#3d5afe', 'aktuell entnommen'],
     ['#eceff5', 'expandiert'],
     ['#ffffff', 'in der Frontier (gestrichelt)'],
-    ['#fdf2dd', 'Zyklus verworfen'],
+    ['#fdf2dd', 'Zyklus verworfen', 'cycle'],
     ['#d5f0e2', 'Ziel erreicht']
   ];
 
@@ -90,6 +90,7 @@ window.ISA = window.ISA || {};
       dot.style.background = item[0];
       span.appendChild(dot);
       span.appendChild(document.createTextNode(item[1]));
+      if (item[2]) span.dataset.key = item[2];
       box.appendChild(span);
     });
     return box;
@@ -99,29 +100,31 @@ window.ISA = window.ISA || {};
     var p = h('div', 'panel');
     var head = h('div', 'panel-head');
     head.appendChild(h('h3', null, title));
-    buttons.forEach(function (b) {
+    var made = buttons.map(function (b) {
       var btn = h('button', 'mini', b.label);
       btn.type = 'button';
       btn.title = b.title || '';
       btn.addEventListener('click', b.onClick);
       head.appendChild(btn);
+      return btn;
     });
     var wrap = h('div', 'svg-wrap');
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     wrap.appendChild(svg);
     p.appendChild(head);
     p.appendChild(wrap);
-    return { el: p, svg: svg, head: head };
+    return { el: p, svg: svg, head: head, buttons: made };
   }
 
   /**
-   * @param {{onSelectStep:Function, onDragNode:Function, onToggleLayout:Function}} hooks
+   * @param {{onSelectStep:Function, onDragNode:Function, onToggleLayout:Function, onToggleCycles:Function}} hooks
    */
   ISA.createView = function createView(hooks) {
     var run = null;
     var positions = null;
     var treePos = null;
     var treeView = null;     // vom Nutzer gewähltes Sichtfenster, sonst automatisch
+    var hideCycles = false;  // verworfene Zyklen im Suchbaum ausblenden
     var stepIndex = 0;
 
     var root = h('section', 'view');
@@ -140,11 +143,19 @@ window.ISA = window.ISA || {};
     graphPanel.el.appendChild(legend(GRAPH_LEGEND));
 
     var treePanel = panel('Suchbaum', [
+      {
+        label: 'Zyklen aus',
+        title: 'Verworfene Zyklen im Suchbaum ein- oder ausblenden (die Zähler bleiben davon unberührt)',
+        onClick: function () { hooks.onToggleCycles(); }
+      },
       { label: 'Ansicht', title: 'Zoom und Verschiebung zurücksetzen', onClick: function () { treeView = null; render(); } },
       { label: 'SVG', onClick: function () { exportSvg(treePanel.svg, fileName('suchbaum')); } },
       { label: 'PNG', onClick: function () { exportPng(treePanel.svg, fileName('suchbaum')); } }
     ]);
     treePanel.el.appendChild(legend(TREE_LEGEND));
+
+    var cycleButton = treePanel.buttons[0];
+    var cycleLegend = treePanel.el.querySelector('.legend span[data-key="cycle"]');
 
     var panels = h('div', 'panels');
     panels.appendChild(graphPanel.el);
@@ -211,7 +222,9 @@ window.ISA = window.ISA || {};
     }
 
     function visibleTreeNodes() {
-      return run.tree.filter(function (t) { return t.createdAtStep <= stepIndex; });
+      return run.tree.filter(function (t) {
+        return t.createdAtStep <= stepIndex && !(hideCycles && t.pruned);
+      });
     }
 
     /* ------------------------------------------------------------ Protokoll */
@@ -416,7 +429,8 @@ window.ISA = window.ISA || {};
         run: run,
         stepIndex: stepIndex,
         treePos: treePos,
-        view: treeView
+        view: treeView,
+        hideCycles: hideCycles
       });
     }
 
@@ -426,7 +440,7 @@ window.ISA = window.ISA || {};
       setRun: function (nextRun, nextPositions) {
         run = nextRun;
         positions = nextPositions;
-        treePos = ISA.layoutTree(run.tree);
+        treePos = ISA.layoutTree(run.tree, { hideCycles: hideCycles });
         treeView = null;
         stepIndex = 0;
 
@@ -442,6 +456,18 @@ window.ISA = window.ISA || {};
 
       setPositions: function (nextPositions) {
         positions = nextPositions;
+        render();
+      },
+
+      setHideCycles: function (flag) {
+        hideCycles = !!flag;
+        cycleButton.textContent = hideCycles ? 'Zyklen ein' : 'Zyklen aus';
+        cycleButton.classList.toggle('is-active', hideCycles);
+        if (cycleLegend) cycleLegend.hidden = hideCycles;
+        if (!run) return;
+        // Das Layout muss neu gerechnet werden, damit der Baum wirklich schmaler wird.
+        treePos = ISA.layoutTree(run.tree, { hideCycles: hideCycles });
+        treeView = null;
         render();
       },
 

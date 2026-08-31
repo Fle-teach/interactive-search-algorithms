@@ -257,7 +257,7 @@ window.ISA = window.ISA || {};
 
   /**
    * @param {SVGElement} svg
-   * @param {{run:object, stepIndex:number, treePos:Array, view?:object}} ctx
+   * @param {{run:object, stepIndex:number, treePos:Array, view?:object, hideCycles?:boolean}} ctx
    */
   ISA.renderTree = function renderTree(svg, ctx) {
     var run = ctx.run;
@@ -268,7 +268,9 @@ window.ISA = window.ISA || {};
     svg.setAttribute('class', 'isa-svg');
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-    var visible = run.tree.filter(function (t) { return t.createdAtStep <= ctx.stepIndex; });
+    var visible = run.tree.filter(function (t) {
+      return t.createdAtStep <= ctx.stepIndex && !(ctx.hideCycles && t.pruned);
+    });
 
     // Sichtfenster: automatisch auf die sichtbaren Knoten, sofern der Nutzer
     // nicht selbst gezoomt oder verschoben hat.
